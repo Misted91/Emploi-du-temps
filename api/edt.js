@@ -21,11 +21,11 @@ const PALETTE = [
 ];
 
 // ---------- Petits utilitaires ----------
-// ÉcoleDirecte attend le corps « data=<json brut> » SANS ré-encodage
-// (c'est ce qu'envoient les clients qui fonctionnent). Ré-encoder casse
-// la lecture du mot de passe => "identifiant/mot de passe invalide".
+// ÉcoleDirecte décode (URL-decode) la valeur du paramètre "data".
+// On encode donc proprement le JSON : après décodage côté serveur, le mot
+// de passe (avec + & % espace…) redevient EXACTEMENT celui saisi.
 function formBody(obj) {
-  return "data=" + JSON.stringify(obj);
+  return "data=" + encodeURIComponent(JSON.stringify(obj));
 }
 function b64decode(s) { return Buffer.from(s, "base64").toString("utf-8"); }
 function b64encode(s) { return Buffer.from(s, "utf-8").toString("base64"); }
@@ -75,9 +75,7 @@ async function getGtk() {
 // Appel POST générique vers l'API.
 async function edPost(path, dataObj, { token, gtk, cookie } = {}) {
   const headers = {
-    // text/plain : ÉcoleDirecte lit "data=<json>" tel quel, sans décoder
-    // (form-urlencoded déformait les mots de passe à caractères spéciaux : + & % espace)
-    "Content-Type": "text/plain",
+    "Content-Type": "application/x-www-form-urlencoded",
     "User-Agent": UA,
     "Accept": "application/json, text/plain, */*",
     "Accept-Language": "fr-FR,fr;q=0.9",
