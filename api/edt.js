@@ -8,7 +8,8 @@
 // ============================================================
 
 const API = "https://api.ecoledirecte.com/v3";
-const API_VERSION = "4.64.0"; // version de l'API ÉcoleDirecte (à ajuster si besoin)
+// version de l'API ÉcoleDirecte — surchargeable via variable d'env ED_VERSION
+const API_VERSION = process.env.ED_VERSION || "4.64.0";
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
   "(KHTML, like Gecko) Chrome/120.0 Safari/537.36";
@@ -30,16 +31,26 @@ function b64decode(s) { return Buffer.from(s, "base64").toString("utf-8"); }
 function b64encode(s) { return Buffer.from(s, "utf-8").toString("base64"); }
 
 function setCookies(resp) {
-  return typeof resp.headers.getSetCookie === "function"
-    ? resp.headers.getSetCookie()
-    : [];
+  if (typeof resp.headers.getSetCookie === "function") {
+    const arr = resp.headers.getSetCookie();
+    if (arr && arr.length) return arr;
+  }
+  // Repli : en-tête brut (undici joint les cookies par ", ")
+  const raw = resp.headers.get("set-cookie");
+  return raw ? [raw] : [];
 }
 
 // Récupère le jeton GTK (obligatoire avant la connexion).
 async function getGtk() {
   const resp = await fetch(`${API}/login.awp?gtk=1&v=${API_VERSION}`, {
     method: "GET",
-    headers: { "User-Agent": UA },
+    headers: {
+      "User-Agent": UA,
+      "Accept": "application/json, text/plain, */*",
+      "Accept-Language": "fr-FR,fr;q=0.9",
+      "Referer": "https://www.ecoledirecte.com/",
+      "X-Requested-With": "XMLHttpRequest",
+    },
   });
   for (const c of setCookies(resp)) {
     const m = /GTK=([^;]+)/.exec(c);
@@ -53,6 +64,10 @@ async function edPost(path, dataObj, { token, gtk } = {}) {
   const headers = {
     "Content-Type": "application/x-www-form-urlencoded",
     "User-Agent": UA,
+    "Accept": "application/json, text/plain, */*",
+    "Accept-Language": "fr-FR,fr;q=0.9",
+    "Referer": "https://www.ecoledirecte.com/",
+    "X-Requested-With": "XMLHttpRequest",
   };
   if (token) headers["X-Token"] = token;
   if (gtk) {
@@ -79,6 +94,7 @@ async function login(identifiant, motdepasse, fa) {
     fa: fa || [],
   };
   const json = await edPost("/login.awp", payload, { gtk });
+  json._gtkFound = !!gtk; // diagnostic
   return json;
 }
 
@@ -214,7 +230,9 @@ export default async function handler(req, res) {
 
     if (l.code !== 200) {
       return res.status(401).json({
-        error: (l.message || "Identifiant ou mot de passe incorrect.") + " (code ÉD " + l.code + ")",
+        error: (l.message || "Identifiant ou mot de passe incorrect.") +
+          " (code ÉD " + l.code + ", GTK " + (l._gtkFound ? "ok" : "manquant") +
+          ", v " + API_VERSION + ")",
         code: l.code,
       });
     }
