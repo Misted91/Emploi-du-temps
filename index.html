@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mon emploi du temps</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="app-header">
+  <div class="brand">
+    <span class="logo">🗓️</span>
+    <div>
+      <h1>Mon emploi du temps</h1>
+      <p class="subtitle">Crée et personnalise ton planning de la semaine</p>
+    </div>
+  </div>
+  <div class="header-actions">
+    <button id="settingsBtn" class="btn btn-ghost" title="Réglages">⚙️ Réglages</button>
+    <button id="exportBtn" class="btn btn-ghost" title="Exporter en fichier">⬇️ Exporter</button>
+    <button id="importBtn" class="btn btn-ghost" title="Importer un fichier">⬆️ Importer</button>
+    <button id="printBtn" class="btn btn-ghost" title="Imprimer / PDF">🖨️ Imprimer</button>
+    <button id="clearBtn" class="btn btn-danger-ghost" title="Tout effacer">🗑️ Vider</button>
+    <input type="file" id="importFile" accept="application/json" hidden />
+  </div>
+</header>
+
+<main>
+  <div class="grid-wrapper">
+    <div id="timetable" class="timetable" aria-label="Grille de l'emploi du temps"></div>
+  </div>
+  <p class="hint">Astuce&nbsp;: clique sur une case pour ajouter un cours. Clique sur un cours pour le modifier. Tout est sauvegardé automatiquement dans ton navigateur.</p>
+</main>
+
+<!-- Modale d'édition d'un cours -->
+<div id="courseModal" class="modal-backdrop" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <h2 id="modalTitle">Ajouter un cours</h2>
+    <form id="courseForm">
+      <label>Matière
+        <input type="text" id="courseTitle" placeholder="Ex : Mathématiques" required maxlength="40" />
+      </label>
+      <label>Salle / Prof (optionnel)
+        <input type="text" id="courseRoom" placeholder="Ex : Salle 204 — M. Dupont" maxlength="40" />
+      </label>
+      <div class="field-row">
+        <label>Début
+          <select id="courseStart"></select>
+        </label>
+        <label>Fin
+          <select id="courseEnd"></select>
+        </label>
+      </div>
+      <label>Jour
+        <select id="courseDay"></select>
+      </label>
+      <label>Couleur</label>
+      <div id="colorPalette" class="color-palette"></div>
+      <div class="modal-actions">
+        <button type="button" id="deleteCourseBtn" class="btn btn-danger" hidden>Supprimer</button>
+        <span class="spacer"></span>
+        <button type="button" id="cancelBtn" class="btn btn-ghost">Annuler</button>
+        <button type="submit" class="btn btn-primary">Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modale de réglages -->
+<div id="settingsModal" class="modal-backdrop" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <h2 id="settingsTitle">Réglages de la grille</h2>
+    <div class="field-row">
+      <label>Heure de début
+        <input type="number" id="setStart" min="0" max="23" />
+      </label>
+      <label>Heure de fin
+        <input type="number" id="setEnd" min="1" max="24" />
+      </label>
+      <label>Durée d'un créneau
+        <select id="setStep">
+          <option value="30">30 min</option>
+          <option value="60">1 heure</option>
+        </select>
+      </label>
+    </div>
+    <label>Jours affichés</label>
+    <div id="daysToggle" class="days-toggle"></div>
+    <div class="modal-actions">
+      <span class="spacer"></span>
+      <button type="button" id="settingsCancelBtn" class="btn btn-ghost">Annuler</button>
+      <button type="button" id="settingsSaveBtn" class="btn btn-primary">Appliquer</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
