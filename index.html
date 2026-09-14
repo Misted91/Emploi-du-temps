@@ -16,6 +16,7 @@
     </div>
   </div>
   <div class="header-actions">
+    <button id="edBtn" class="btn btn-primary" title="Importer depuis ÉcoleDirecte">🔗 ÉcoleDirecte</button>
     <button id="settingsBtn" class="btn btn-ghost" title="Réglages">⚙️ Réglages</button>
     <button id="exportBtn" class="btn btn-ghost" title="Exporter en fichier">⬇️ Exporter</button>
     <button id="importBtn" class="btn btn-ghost" title="Importer un fichier">⬆️ Importer</button>
@@ -90,6 +91,37 @@
       <span class="spacer"></span>
       <button type="button" id="settingsCancelBtn" class="btn btn-ghost">Annuler</button>
       <button type="button" id="settingsSaveBtn" class="btn btn-primary">Appliquer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modale ÉcoleDirecte -->
+<div id="edModal" class="modal-backdrop" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="edTitle">
+    <h2 id="edTitle">🔗 Importer depuis ÉcoleDirecte</h2>
+
+    <div id="edLoginStep">
+      <label>Identifiant ÉcoleDirecte
+        <input type="text" id="edUser" autocomplete="username" placeholder="Ton identifiant" />
+      </label>
+      <label>Mot de passe
+        <input type="password" id="edPass" autocomplete="current-password" placeholder="Ton mot de passe" />
+      </label>
+      <p class="ed-note">🔒 Tes identifiants ne sont pas enregistrés : ils servent seulement à la connexion. Ils transitent par un backend sécurisé (Vercel) qui appelle ÉcoleDirecte à ta place.</p>
+    </div>
+
+    <!-- Étape double authentification (masquée par défaut) -->
+    <div id="edAuthStep" hidden>
+      <p id="edQuestion" class="ed-question"></p>
+      <div id="edPropositions" class="ed-propositions"></div>
+    </div>
+
+    <p id="edMessage" class="ed-message" hidden></p>
+
+    <div class="modal-actions">
+      <span class="spacer"></span>
+      <button type="button" id="edCancelBtn" class="btn btn-ghost">Annuler</button>
+      <button type="button" id="edConnectBtn" class="btn btn-primary">Se connecter</button>
     </div>
   </div>
 </div>

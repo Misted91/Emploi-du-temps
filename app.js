@@ -327,6 +327,159 @@
     render();
   }
 
+  // ---------- ÉcoleDirecte ----------
+  const ED_API = "/api/edt";       // même domaine (Vercel) -> chemin relatif
+  const ED_CREDS_KEY = "edt.ed.cnv"; // cn/cv mémorisés (pour sauter le QCM)
+  let edPendingToken = null;       // jeton temporaire pendant la double auth
+
+  function edShow(id) { document.getElementById(id).hidden = false; }
+  function edHide(id) { document.getElementById(id).hidden = true; }
+
+  function edMessage(text, kind) {
+    const m = document.getElementById("edMessage");
+    if (!text) { m.hidden = true; return; }
+    m.hidden = false;
+    m.textContent = text;
+    m.className = "ed-message " + (kind || "info");
+  }
+
+  function openEd() {
+    edPendingToken = null;
+    edHide("edAuthStep");
+    edShow("edLoginStep");
+    edMessage("", "info");
+    document.getElementById("edPropositions").innerHTML = "";
+    document.getElementById("edConnectBtn").disabled = false;
+    document.getElementById("edConnectBtn").textContent = "Se connecter";
+    show("edModal");
+    document.getElementById("edUser").focus();
+  }
+
+  async function edCall(payload) {
+    const res = await fetch(ED_API, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  }
+
+  function edStoredCreds() {
+    try { return JSON.parse(localStorage.getItem(ED_CREDS_KEY) || "null"); }
+    catch (e) { return null; }
+  }
+
+  async function edConnect() {
+    const identifiant = document.getElementById("edUser").value.trim();
+    const motdepasse = document.getElementById("edPass").value;
+    if (!identifiant || !motdepasse) {
+      edMessage("Renseigne ton identifiant et ton mot de passe.", "error");
+      return;
+    }
+    const btn = document.getElementById("edConnectBtn");
+    btn.disabled = true;
+    btn.textContent = "Connexion…";
+    edMessage("Connexion à ÉcoleDirecte…", "info");
+
+    try {
+      const saved = edStoredCreds() || {};
+      const data = await edCall({ identifiant, motdepasse, cn: saved.cn, cv: saved.cv });
+
+      if (data.needAuth) {
+        edPendingToken = data.token;
+        edShowAuth(identifiant, motdepasse, data.question, data.propositions);
+        return;
+      }
+      if (data.ok) {
+        edSaveCnv(data);
+        edFinish(data.lessons);
+        return;
+      }
+      edMessage(data.error || "Échec de la connexion.", "error");
+    } catch (e) {
+      edMessage("Impossible de joindre le backend. Le site doit être ouvert depuis l'adresse Vercel.", "error");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Se connecter";
+    }
+  }
+
+  function edShowAuth(identifiant, motdepasse, question, propositions) {
+    edHide("edLoginStep");
+    edShow("edAuthStep");
+    edMessage("Réponds à la question de sécurité.", "info");
+    document.getElementById("edQuestion").textContent = question;
+    const box = document.getElementById("edPropositions");
+    box.innerHTML = "";
+    document.getElementById("edConnectBtn").hidden = true;
+
+    propositions.forEach((p) => {
+      const b = el("button", "btn btn-ghost");
+      b.type = "button";
+      b.textContent = p;
+      b.addEventListener("click", () => edAnswer(identifiant, motdepasse, p));
+      box.appendChild(b);
+    });
+  }
+
+  async function edAnswer(identifiant, motdepasse, choix) {
+    edMessage("Vérification…", "info");
+    Array.from(document.querySelectorAll("#edPropositions .btn")).forEach((b) => (b.disabled = true));
+    try {
+      const data = await edCall({ identifiant, motdepasse, token: edPendingToken, choix });
+      if (data.ok) {
+        edSaveCnv(data);
+        edFinish(data.lessons);
+        return;
+      }
+      edMessage(data.error || "Réponse incorrecte.", "error");
+      Array.from(document.querySelectorAll("#edPropositions .btn")).forEach((b) => (b.disabled = false));
+    } catch (e) {
+      edMessage("Erreur réseau. Réessaie.", "error");
+      Array.from(document.querySelectorAll("#edPropositions .btn")).forEach((b) => (b.disabled = false));
+    }
+  }
+
+  function edSaveCnv(data) {
+    if (data.cn && data.cv) {
+      try { localStorage.setItem(ED_CREDS_KEY, JSON.stringify({ cn: data.cn, cv: data.cv })); }
+      catch (e) { /* ignore */ }
+    }
+  }
+
+  function edFinish(lessons) {
+    document.getElementById("edConnectBtn").hidden = false;
+    if (!lessons || !lessons.length) {
+      edMessage("Connecté, mais aucun cours trouvé pour cette semaine.", "error");
+      return;
+    }
+    applyImportedLessons(lessons);
+    hide("edModal");
+  }
+
+  // Remplace l'emploi du temps et ajuste la grille aux cours importés.
+  function applyImportedLessons(lessons) {
+    let minStart = 24 * 60, maxEnd = 0;
+    const daysPresent = new Set();
+    let half = false;
+    lessons.forEach((l) => {
+      minStart = Math.min(minStart, l.start);
+      maxEnd = Math.max(maxEnd, l.end);
+      daysPresent.add(l.day);
+      if (l.start % 60 !== 0 || l.end % 60 !== 0) half = true;
+    });
+    const order = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+    state.settings.days = order.filter((d) => daysPresent.has(d));
+    if (!state.settings.days.length) state.settings.days = ["mon"];
+    state.settings.startHour = Math.max(0, Math.floor(minStart / 60));
+    state.settings.endHour = Math.min(24, Math.ceil(maxEnd / 60));
+    if (state.settings.endHour <= state.settings.startHour) state.settings.endHour = state.settings.startHour + 1;
+    state.settings.step = half ? 30 : state.settings.step;
+    state.courses = lessons;
+    save();
+    render();
+  }
+
   // ---------- Helpers modales ----------
   function show(id) { document.getElementById(id).hidden = false; }
   function hide(id) { document.getElementById(id).hidden = true; }
@@ -336,6 +489,10 @@
     document.getElementById("courseForm").addEventListener("submit", submitCourse);
     document.getElementById("cancelBtn").addEventListener("click", () => hide("courseModal"));
     document.getElementById("deleteCourseBtn").addEventListener("click", deleteCourse);
+
+    document.getElementById("edBtn").addEventListener("click", openEd);
+    document.getElementById("edConnectBtn").addEventListener("click", edConnect);
+    document.getElementById("edCancelBtn").addEventListener("click", () => hide("edModal"));
 
     document.getElementById("settingsBtn").addEventListener("click", openSettings);
     document.getElementById("settingsSaveBtn").addEventListener("click", saveSettings);
