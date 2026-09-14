@@ -40,7 +40,8 @@ function setCookies(resp) {
   return raw ? [raw] : [];
 }
 
-// Récupère le jeton GTK (obligatoire avant la connexion).
+// Récupère le jeton GTK + TOUS les cookies posés par ÉcoleDirecte.
+// (le pare-feu exige que l'ensemble des cookies soit renvoyé au login)
 async function getGtk() {
   const resp = await fetch(`${API}/login.awp?gtk=1&v=${API_VERSION}`, {
     method: "GET",
@@ -52,15 +53,27 @@ async function getGtk() {
       "X-Requested-With": "XMLHttpRequest",
     },
   });
+  let gtk = null;
+  const pairs = [];
   for (const c of setCookies(resp)) {
-    const m = /GTK=([^;]+)/.exec(c);
-    if (m) return m[1];
+    // undici peut joindre plusieurs cookies par ", " -> on découpe prudemment
+    const chunks = c.split(/,(?=[^;]+?=)/);
+    for (const chunk of chunks) {
+      const nv = chunk.trim().split(";")[0]; // "nom=valeur"
+      const eq = nv.indexOf("=");
+      if (eq < 0) continue;
+      const name = nv.slice(0, eq).trim();
+      const val = nv.slice(eq + 1).trim();
+      if (!name) continue;
+      if (name === "GTK") gtk = val;
+      pairs.push(name + "=" + val);
+    }
   }
-  return null;
+  return { gtk, cookie: pairs.join("; ") };
 }
 
 // Appel POST générique vers l'API.
-async function edPost(path, dataObj, { token, gtk } = {}) {
+async function edPost(path, dataObj, { token, gtk, cookie } = {}) {
   const headers = {
     "Content-Type": "application/x-www-form-urlencoded",
     "User-Agent": UA,
@@ -70,10 +83,9 @@ async function edPost(path, dataObj, { token, gtk } = {}) {
     "X-Requested-With": "XMLHttpRequest",
   };
   if (token) headers["X-Token"] = token;
-  if (gtk) {
-    headers["X-Gtk"] = gtk; // casse exacte attendue par ÉcoleDirecte
-    headers["Cookie"] = "GTK=" + gtk;
-  }
+  if (gtk) headers["X-Gtk"] = gtk; // casse exacte attendue par ÉcoleDirecte
+  if (cookie) headers["Cookie"] = cookie;
+  else if (gtk) headers["Cookie"] = "GTK=" + gtk;
   const sep = path.includes("?") ? "&" : "?";
   const resp = await fetch(`${API}${path}${sep}v=${API_VERSION}`, {
     method: "POST",
@@ -85,16 +97,17 @@ async function edPost(path, dataObj, { token, gtk } = {}) {
 
 // ---------- Connexion ----------
 async function login(identifiant, motdepasse, fa) {
-  const gtk = await getGtk();
+  const { gtk, cookie } = await getGtk();
   const payload = {
     identifiant,
     motdepasse,
-    isReLogin: false,
+    isRelogin: false,
     uuid: "",
     fa: fa || [],
   };
-  const json = await edPost("/login.awp", payload, { gtk });
+  const json = await edPost("/login.awp", payload, { gtk, cookie });
   json._gtkFound = !!gtk; // diagnostic
+  json._nCookies = cookie ? cookie.split("; ").length : 0;
   return json;
 }
 
@@ -232,7 +245,7 @@ export default async function handler(req, res) {
       return res.status(401).json({
         error: (l.message || "Identifiant ou mot de passe incorrect.") +
           " (code ÉD " + l.code + ", GTK " + (l._gtkFound ? "ok" : "manquant") +
-          ", v " + API_VERSION + ")",
+          ", cookies " + l._nCookies + ", v " + API_VERSION + ")",
         code: l.code,
       });
     }
