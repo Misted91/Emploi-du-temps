@@ -75,7 +75,8 @@ async function getGtk() {
 // Appel POST générique vers l'API.
 async function edPost(path, dataObj, { token, gtk, cookie } = {}) {
   const headers = {
-    "Content-Type": "application/x-www-form-urlencoded",
+    // JSON pur : aucun encodage d'URL, le mot de passe passe intact
+    "Content-Type": "application/json",
     "User-Agent": UA,
     "Accept": "application/json, text/plain, */*",
     "Accept-Language": "fr-FR,fr;q=0.9",
@@ -90,7 +91,7 @@ async function edPost(path, dataObj, { token, gtk, cookie } = {}) {
   const resp = await fetch(`${API}${path}${sep}v=${API_VERSION}`, {
     method: "POST",
     headers,
-    body: formBody(dataObj),
+    body: JSON.stringify(dataObj),
   });
   return resp.json();
 }
