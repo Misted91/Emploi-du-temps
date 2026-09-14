@@ -9,7 +9,7 @@
 
 const API = "https://api.ecoledirecte.com/v3";
 // version de l'API ÉcoleDirecte — surchargeable via variable d'env ED_VERSION
-const API_VERSION = process.env.ED_VERSION || "4.64.0";
+const API_VERSION = process.env.ED_VERSION || "4.75.0";
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
   "(KHTML, like Gecko) Chrome/120.0 Safari/537.36";
@@ -71,7 +71,7 @@ async function edPost(path, dataObj, { token, gtk } = {}) {
   };
   if (token) headers["X-Token"] = token;
   if (gtk) {
-    headers["X-GTK"] = gtk;
+    headers["X-Gtk"] = gtk; // casse exacte attendue par ÉcoleDirecte
     headers["Cookie"] = "GTK=" + gtk;
   }
   const sep = path.includes("?") ? "&" : "?";
