@@ -245,7 +245,8 @@ export default async function handler(req, res) {
       return res.status(401).json({
         error: (l.message || "Identifiant ou mot de passe incorrect.") +
           " (code ÉD " + l.code + ", GTK " + (l._gtkFound ? "ok" : "manquant") +
-          ", cookies " + l._nCookies + ", v " + API_VERSION + ")",
+          ", cookies " + l._nCookies + ", v " + API_VERSION +
+          ", id " + String(identifiant).length + " car., mdp " + String(motdepasse).length + " car.)",
         code: l.code,
       });
     }
