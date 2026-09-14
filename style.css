@@ -139,6 +139,7 @@ main { padding: 24px; }
 .hint { color: var(--muted); font-size: 13px; text-align: center; margin-top: 16px; }
 
 /* Modales */
+.modal-backdrop[hidden] { display: none !important; }
 .modal-backdrop {
   position: fixed;
   inset: 0;
