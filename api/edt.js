@@ -75,7 +75,9 @@ async function getGtk() {
 // Appel POST générique vers l'API.
 async function edPost(path, dataObj, { token, gtk, cookie } = {}) {
   const headers = {
-    "Content-Type": "application/x-www-form-urlencoded",
+    // text/plain : ÉcoleDirecte lit "data=<json>" tel quel, sans décoder
+    // (form-urlencoded déformait les mots de passe à caractères spéciaux : + & % espace)
+    "Content-Type": "text/plain",
     "User-Agent": UA,
     "Accept": "application/json, text/plain, */*",
     "Accept-Language": "fr-FR,fr;q=0.9",
