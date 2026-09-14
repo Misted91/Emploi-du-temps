@@ -328,7 +328,7 @@
   }
 
   // ---------- ÉcoleDirecte ----------
-  const ED_API = "/api/edt";       // même domaine (Vercel) -> chemin relatif
+  const ED_API = "edt.php";        // backend PHP déposé à côté de index.html (OVH)
   const ED_CREDS_KEY = "edt.ed.cnv"; // cn/cv mémorisés (pour sauter le QCM)
   let edPendingToken = null;       // jeton temporaire pendant la double auth
 
