@@ -20,8 +20,11 @@ const PALETTE = [
 ];
 
 // ---------- Petits utilitaires ----------
+// ÉcoleDirecte attend le corps « data=<json brut> » SANS ré-encodage
+// (c'est ce qu'envoient les clients qui fonctionnent). Ré-encoder casse
+// la lecture du mot de passe => "identifiant/mot de passe invalide".
 function formBody(obj) {
-  return "data=" + encodeURIComponent(JSON.stringify(obj));
+  return "data=" + JSON.stringify(obj);
 }
 function b64decode(s) { return Buffer.from(s, "base64").toString("utf-8"); }
 function b64encode(s) { return Buffer.from(s, "utf-8").toString("base64"); }
@@ -210,7 +213,10 @@ export default async function handler(req, res) {
     }
 
     if (l.code !== 200) {
-      return res.status(401).json({ error: l.message || "Identifiant ou mot de passe incorrect." });
+      return res.status(401).json({
+        error: (l.message || "Identifiant ou mot de passe incorrect.") + " (code ÉD " + l.code + ")",
+        code: l.code,
+      });
     }
 
     const lessons = await fetchTimetable(accountId(l), l.token);
